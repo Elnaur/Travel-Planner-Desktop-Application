@@ -13,23 +13,14 @@ Coordinates=483,282,56,36
 [imgSBackground]
 Coordinates=466,78,112,58
 
-[dtpDoB]
-Coordinates=313,78,60,58
-
 [edtLPassword]
 Coordinates=330,10,96,58
-
-[lblSUsername]
-Coordinates=112,214,95,58
 
 [lblPhoneNo]
 Coordinates=442,214,81,58
 
 [edtSEmail]
 Coordinates=383,78,73,58
-
-[edtLUsername]
-Coordinates=114,10,99,58
 
 [lblLPassword]
 Coordinates=341,214,91,58
@@ -52,21 +43,12 @@ Coordinates=217,214,114,58
 [cbLRemember]
 Coordinates=92,282,114,58
 
-[edtSUsername]
-Coordinates=206,146,100,58
-
-[lblDoB]
-Coordinates=250,78,53,58
-
 [imgLBackground]
 Coordinates=129,78,111,58
 Visible=True
 
 [pnlSSignUp]
 Coordinates=10,146,82,58
-
-[lblLUsername]
-Coordinates=10,10,94,58
 
 [pnlLLogin]
 Coordinates=436,10,70,58
@@ -75,11 +57,26 @@ Coordinates=436,10,70,58
 Coordinates=10,78,109,58
 
 []
-Coordinates=664,78,91,36
+Coordinates=313,78,60,58
 
 [pnlLToSignup]
 Coordinates=216,282,72,58
 
 [pnlSToLogin]
 Coordinates=10,282,72,58
+
+[edtSFirstName]
+Coordinates=206,146,100,58
+
+[lblSFirstName]
+Coordinates=112,214,95,58
+
+[lblSIDno]
+Coordinates=250,78,53,58
+
+[lblLEmail]
+Coordinates=10,10,94,58
+
+[edtLEmail]
+Coordinates=114,10,99,58
 

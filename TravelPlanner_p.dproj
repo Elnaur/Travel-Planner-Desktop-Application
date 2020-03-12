@@ -87,6 +87,11 @@
         <DCC_RemoteDebug>false</DCC_RemoteDebug>
         <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
         <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>
+        <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
+        <VerInfo_Locale>1033</VerInfo_Locale>
+        <Icon_MainIcon>media\images\logo_icon.ico</Icon_MainIcon>
+        <UWP_DelphiLogo44>media\images\logo_alone.png</UWP_DelphiLogo44>
+        <UWP_DelphiLogo150>media\images\logo_alone.png</UWP_DelphiLogo150>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
@@ -107,8 +112,14 @@
             <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="Mainmenu_u.pas">
-            <Form>Form1</Form>
+            <Form>frmMainMenu</Form>
             <FormType>dfm</FormType>
+        </DCCReference>
+        <DCCReference Include="user_cls.pas"/>
+        <DCCReference Include="TravelRouter_dm.pas">
+            <Form>dmTravelRouter</Form>
+            <FormType>dfm</FormType>
+            <DesignClass>TDataModule</DesignClass>
         </DCCReference>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
@@ -141,13 +152,6 @@
                 <DeployFile LocalName="Win32\Debug\TravelPlanner_p.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>TravelPlanner_p.exe</RemoteName>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
-                <DeployFile LocalName="media\logo_icon.png" Configuration="Debug" Class="UWP_DelphiLogo44">
-                    <Platform Name="Win32">
-                        <RemoteDir>Assets\</RemoteDir>
-                        <RemoteName>Logo44x44.png</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
