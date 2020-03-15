@@ -23,19 +23,19 @@ type
 
     constructor Create(argFirstName, argSurname, argEmail, argPhoneNo, argIDno,
       argPassword: string);
-    destructor Destroy;
 
-    function AddToDB;
+    procedure AddToDB;
+    procedure UpdateDB;
   end;
 
 const
-  Key = 32515;
+  Key = 2321;
 
 implementation
 
 { TUser }
 
-function TUser.AddToDB;
+procedure TUser.AddToDB;
 begin
   with dmTravelRouter do
   begin
@@ -43,11 +43,12 @@ begin
     tblUsers.Append;
     tblUsers['First Name'] := fFirstName;
     tblUsers['Surname'] := fSurname;
-    tblUsers['Password'] := EncryptStr(fPassword, Key);   // Uses encryption module
+    // Uses encryption module
+    tblUsers['Password'] := EncryptStr(fPassword, Key);
     tblUsers['Email'] := fEmail;
     tblUsers['Phone No'] := fPhoneNo;
     tblUsers['Birthdate'] := fDoB;
-    tblUsers['IDNo'] := fIDNo;
+    tblUsers['ID No'] := fIDNo;
     tblUsers['Gender'] := fGender;
     tblUsers.Post;
     tblUsers.Close;
@@ -82,12 +83,32 @@ begin
   fPhoneNo := argPhoneNo;
   fIDNo := argIDno;
   fPassword := argPassword;
+  fEmail := argEmail;
 
 end;
 
-destructor TUser.Destroy;
+procedure TUser.UpdateDB;
 begin
-  Free;
+  with dmTravelRouter do
+  begin
+    tblUsers.Open;
+    tblUsers.First;
+    while not tblUsers.Eof do
+    begin
+      tblUsers.Edit;
+      tblUsers['First Name'] := fFirstName;
+      tblUsers['Surname'] := fSurname;
+      // Uses encryption module
+      tblUsers['Password'] := EncryptStr(fPassword, Key);
+      tblUsers['Email'] := fEmail;
+      tblUsers['Phone No'] := fPhoneNo;
+      tblUsers['Birthdate'] := fDoB;
+      tblUsers['ID No'] := fIDNo;
+      tblUsers['Gender'] := fGender;
+      tblUsers.Post;
+      tblUsers.Close;
+    end;
+  end;
 end;
 
 end.

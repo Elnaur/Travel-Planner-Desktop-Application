@@ -80,14 +80,14 @@ var
   cDigit: integer;
   iParity: integer;
 begin
-  iSum := StrToInt(argIDno[length(argIDno) - 1]);
+  iSum := StrToInt(argIDno[length(argIDno)]);
   cDigit := length(argIDno);
   iParity := cDigit mod 2;
 
-  for i := 0 to cDigit - 2 do
+  for i := 1 to cDigit - 1 do
   begin
     iDigit := StrToInt(argIDno[i]);
-    if i mod 2 = iParity then
+    if (i - 1) mod 2 = iParity then
       iDigit := iDigit * 2;
     if iDigit > 9 then
       iDigit := iDigit - 9;
@@ -176,28 +176,36 @@ begin
 end;
 
 procedure TfrmLoginSignup.pnlLLoginClick(Sender: TObject);
+var
+  bFound: boolean;
 begin
+  bFound := False;
+
   with dmTravelRouter do
   begin
     tblUsers.Open;
     tblUsers.First;
     while not tblUsers.Eof do
     begin
-      if tblUsers['Email'] = edtLEmail.Text then
+      if tblUsers['Email'] = edtLEmail.Text then // check if email is registered
       begin
         if DecryptStr(tblUsers['Password'], Key) = edtLPassword.Text then
+        // check if the email and password match
         begin
+          bFound := True;
           User := TUser.Create(tblUsers['First Name'], tblUsers['Surname'],
-            tblUsers['Email'], tblUsers['Phone No'], tblUsers['IDNo'],
-            EncryptStr(tblUsers['Password'], Key));
-            frmMainMenu.Show;
-            Hide;
+            tblUsers['Email'], tblUsers['Phone No'], tblUsers['ID No'],
+            EncryptStr(tblUsers['Password'], Key)); // Initiate TUser object
+          frmMainMenu.Show;
+          Hide;
+          break;
         end;
       end;
       tblUsers.Next;
     end;
-    Showmessage('Incorrect password.');
-
+    if bFound = False then
+      Showmessage('Incorrect password or email.');
+    tblUsers.Close;
   end;
 end;
 
@@ -214,19 +222,19 @@ begin
 
   if not isValidEmail(edtSEmail.Text) then
   begin
-    ShowMessage('Invalid email adress.');
+    Showmessage('Invalid email adress.');
     bValid := False;
   end;
 
   if not isValidTelephoneNo(edtSPhoneNo.Text) then
   begin
-    ShowMessage('Invalid telephone number.');
+    Showmessage('Invalid telephone number.');
     bValid := False;
   end;
 
   if not isValidIDNo(edtSIDno.Text) then
   begin
-    ShowMessage('Invalid ID number.');
+    Showmessage('Invalid ID number.');
     bValid := False;
   end;
 
@@ -239,6 +247,8 @@ begin
       if edtSEmail.Text = tblUsers['Email'] then
       begin
         bValid := False;
+        Showmessage('Email already in use.');
+        break;
       end;
       tblUsers.Next;
     end;
@@ -247,10 +257,11 @@ begin
     if bValid = True then
     begin
       User := TUser.Create(edtSFirstName.Text, edtSSurname.Text, edtSEmail.Text,
-        edtSPhoneNo.Text, edtSIDno, edtSPassword.Text);
+        edtSPhoneNo.Text, edtSIDno.Text, edtSPassword.Text);
       User.AddToDB;
+      frmMainMenu.Show;
+      Hide;
     end;
-
   end;
 
 end;

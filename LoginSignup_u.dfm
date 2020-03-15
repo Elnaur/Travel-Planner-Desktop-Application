@@ -17864,7 +17864,7 @@ object frmLoginSignup: TfrmLoginSignup
         ParentFont = False
       end
       object lblLHeading2: TLabel
-        Left = 118
+        Left = 111
         Top = 85
         Width = 131
         Height = 79
@@ -17940,11 +17940,12 @@ object frmLoginSignup: TfrmLoginSignup
         Font.Style = []
         ParentFont = False
         TabOrder = 0
+        Text = 'admin'
       end
       object edtLPassword: TEdit
         Left = 104
         Top = 197
-        Width = 145
+        Width = 140
         Height = 21
         Color = clWhite
         Font.Charset = DEFAULT_CHARSET
@@ -17953,7 +17954,9 @@ object frmLoginSignup: TfrmLoginSignup
         Font.Name = 'Tahoma'
         Font.Style = []
         ParentFont = False
+        PasswordChar = '*'
         TabOrder = 1
+        Text = 'admin'
       end
       object cbLRemember: TCheckBox
         Left = 142
@@ -18015,10 +18018,6 @@ object frmLoginSignup: TfrmLoginSignup
       Caption = 'Sign up'
       ImageIndex = 1
       TabVisible = False
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object imgSBackground: TImage
         Left = 0
         Top = 0
@@ -34551,6 +34550,7 @@ object frmLoginSignup: TfrmLoginSignup
         Color = clWhite
         PasswordChar = '*'
         TabOrder = 5
+        Text = 'alohomora13'
       end
       object cbSRemember: TCheckBox
         Left = 151
@@ -34576,9 +34576,10 @@ object frmLoginSignup: TfrmLoginSignup
         Color = clWhite
         PasswordChar = '*'
         TabOrder = 6
+        Text = 'alohomora13'
       end
       object pnlSSignUp: TPanel
-        Left = 48
+        Left = 49
         Top = 290
         Width = 179
         Height = 41
@@ -34618,6 +34619,7 @@ object frmLoginSignup: TfrmLoginSignup
         Height = 21
         Color = clWhite
         TabOrder = 2
+        Text = 'nicole.c.loubser@gmail.com'
       end
       object edtSPhoneNo: TEdit
         Left = 112
@@ -34627,6 +34629,7 @@ object frmLoginSignup: TfrmLoginSignup
         Color = clWhite
         NumbersOnly = True
         TabOrder = 3
+        Text = '0793133292'
       end
       object edtSFirstName: TEdit
         Left = 111
@@ -34635,6 +34638,7 @@ object frmLoginSignup: TfrmLoginSignup
         Height = 21
         Color = clWhite
         TabOrder = 0
+        Text = 'Nicole'
       end
       object edtSSurname: TEdit
         Left = 111
@@ -34643,6 +34647,7 @@ object frmLoginSignup: TfrmLoginSignup
         Height = 21
         Color = clWhite
         TabOrder = 1
+        Text = 'Loubser'
       end
       object edtSIDno: TEdit
         Left = 113
@@ -34652,6 +34657,7 @@ object frmLoginSignup: TfrmLoginSignup
         Color = clWhite
         NumbersOnly = True
         TabOrder = 4
+        Text = '0211070205086'
       end
     end
   end
