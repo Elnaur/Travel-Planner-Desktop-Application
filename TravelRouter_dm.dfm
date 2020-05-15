@@ -19,7 +19,13 @@ object dmTravelRouter: TdmTravelRouter
   object tblUsers: TADOTable
     Connection = connTravelRouterDB
     TableName = 'Users'
-    Left = 168
-    Top = 48
+    Left = 152
+    Top = 56
+  end
+  object tblAccomodation: TADOTable
+    Connection = connTravelRouterDB
+    TableName = 'Accomodation'
+    Left = 152
+    Top = 152
   end
 end

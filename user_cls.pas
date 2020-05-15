@@ -20,6 +20,8 @@ type
   public
     property FirstName: string read fFirstName write fFirstName;
     property Surname: string read fSurname write fSurname;
+    property Email: string read fEmail write fEmail;
+    property Password: string read fPassword write fPassword;
 
     constructor Create(argFirstName, argSurname, argEmail, argPhoneNo, argIDno,
       argPassword: string);
@@ -95,18 +97,22 @@ begin
     tblUsers.First;
     while not tblUsers.Eof do
     begin
-      tblUsers.Edit;
-      tblUsers['First Name'] := fFirstName;
-      tblUsers['Surname'] := fSurname;
-      // Uses encryption module
-      tblUsers['Password'] := EncryptStr(fPassword, Key);
-      tblUsers['Email'] := fEmail;
-      tblUsers['Phone No'] := fPhoneNo;
-      tblUsers['Birthdate'] := fDoB;
-      tblUsers['ID No'] := fIDNo;
-      tblUsers['Gender'] := fGender;
-      tblUsers.Post;
-      tblUsers.Close;
+      if tblUsers['Email'] = fEmail then
+      begin
+        tblUsers.Edit;
+        tblUsers['First Name'] := fFirstName;
+        tblUsers['Surname'] := fSurname;
+        // Uses encryption module
+        tblUsers['Password'] := EncryptStr(fPassword, Key);
+        tblUsers['Email'] := fEmail;
+        tblUsers['Phone No'] := fPhoneNo;
+        tblUsers['Birthdate'] := fDoB;
+        tblUsers['ID No'] := fIDNo;
+        tblUsers['Gender'] := fGender;
+        tblUsers.Post;
+        tblUsers.Close;
+        break;
+      end;
     end;
   end;
 end;

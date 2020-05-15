@@ -217,8 +217,15 @@ end;
 procedure TfrmLoginSignup.pnlSSignUpClick(Sender: TObject);
 var
   bValid: boolean;
+  fRemember: Textfile;
 begin
   bValid := True;
+
+  if edtSPassword.Text <> edtSRePassword.Text then
+  begin
+    Showmessage('Passwords must match.');
+    bValid := False;
+  end;
 
   if not isValidEmail(edtSEmail.Text) then
   begin
@@ -228,7 +235,7 @@ begin
 
   if not isValidTelephoneNo(edtSPhoneNo.Text) then
   begin
-    Showmessage('Invalid telephone number.');
+    Showmessage('Invalid phone number.');
     bValid := False;
   end;
 
@@ -262,6 +269,16 @@ begin
       frmMainMenu.Show;
       Hide;
     end;
+  end;
+
+  if cbSRemember.Checked = True then
+  begin
+    Assignfile(fRemember, copy(GetCurrentDir, 1, length(GetCurrentDir) - 11) +
+      '/media/text/remember_me.txt');
+    Rewrite(fRemember);
+    Writeln(fRemember, EncryptStr(User.Email, Key));
+    Writeln(fRemember, EncryptStr(User.Password, Key));
+    CloseFile(fRemember);
   end;
 
 end;

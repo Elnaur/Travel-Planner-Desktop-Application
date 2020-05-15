@@ -1,6 +1,7 @@
 object frmLoginSignup: TfrmLoginSignup
   Left = 0
   Top = 0
+  ActiveControl = pcLoginSignup
   Caption = 'Registration'
   ClientHeight = 404
   ClientWidth = 278
@@ -24,7 +25,7 @@ object frmLoginSignup: TfrmLoginSignup
     Margins.Top = 0
     Margins.Right = 0
     Margins.Bottom = 0
-    ActivePage = tsLogin
+    ActivePage = tsSignup
     Align = alClient
     OwnerDraw = True
     TabOrder = 0
@@ -38,6 +39,10 @@ object frmLoginSignup: TfrmLoginSignup
       DoubleBuffered = False
       ParentDoubleBuffered = False
       TabVisible = False
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object imgLBackground: TImage
         Left = 0
         Top = 0
@@ -34491,11 +34496,11 @@ object frmLoginSignup: TfrmLoginSignup
         ParentFont = False
       end
       object lblPhoneNo: TLabel
-        Left = 49
+        Left = 46
         Top = 103
-        Width = 60
+        Width = 38
         Height = 16
-        Caption = 'Telephone:'
+        Caption = 'Phone:'
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clWindowText
         Font.Height = -11

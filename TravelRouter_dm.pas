@@ -9,6 +9,7 @@ type
   TdmTravelRouter = class(TDataModule)
     connTravelRouterDB: TADOConnection;
     tblUsers: TADOTable;
+    tblAccomodation: TADOTable;
     procedure DataModuleCreate(Sender: TObject);
   private
     { Private declarations }

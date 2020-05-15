@@ -1,0 +1,30 @@
+912:554
+860:454
+
+Current Trip:
+
+One place:
+- City/Town
+- Accomodation name
+- Date arrival
+- Date departure
+- For x children x adults
+
+Click (PoI):
+- Name
+- Hours
+- How far from accomodation
+- Image
+
+Plan Trip:
+
+- Start Position
+- First night place/accomodation
+- See three top accomodation matches
+- Add booking button
+- How many people
+- Date of arrival
+- Date of departure
+- Next place
+
+

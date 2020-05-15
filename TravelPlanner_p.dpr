@@ -5,7 +5,8 @@ uses
   LoginSignup_u in 'LoginSignup_u.pas' {frmLoginSignup},
   Mainmenu_u in 'Mainmenu_u.pas' {frmMainMenu},
   user_cls in 'user_cls.pas',
-  TravelRouter_dm in 'TravelRouter_dm.pas' {dmTravelRouter: TDataModule};
+  TravelRouter_dm in 'TravelRouter_dm.pas' {dmTravelRouter: TDataModule},
+  fuzzystring_u in 'fuzzystring_u.pas';
 
 {$R *.res}
 
