@@ -59,13 +59,18 @@ type
     { Public declarations }
   end;
 
-function isValidEmail(argEmail: string): boolean;
-function isValidTelephoneNo(argTelephone: string): boolean;
+function ChecksumLuhnValid(argInput: string): boolean;
+function isValidEmail(argEmail: string): integer;
+function isValidPhoneNo(argTelephone: string): boolean;
 function isValidIDNo(argIDno: string): boolean;
+function FileSize(const aFilename: String): Int64;
+// https://www.generacodice.com/en/articolo/119049/Getting-size-of-a-file-in-Delphi-2010-or-later
 
 var
   frmLoginSignup: TfrmLoginSignup;
   User: TUser;
+  rememberFilePath: string;
+  isGuest: boolean = True;
 
 implementation
 
@@ -73,20 +78,29 @@ uses Mainmenu_u, encryption_u;
 
 {$R *.dfm}
 
-function isValidIDNo(argIDno: string): boolean; // uses the Luhn algorithm
+function FileSize(const aFilename: String): Int64;
+var
+  info: TWin32FileAttributeData;
+begin
+  result := -1;
+
+  if NOT GetFileAttributesEx(PWideChar(aFilename), GetFileExInfoStandard, @info)
+  then
+    EXIT;
+
+  result := Int64(info.nFileSizeLow) or Int64(info.nFileSizeHigh shl 32);
+end;
+
+function ChecksumLuhnValid(argInput: string): boolean;
 var
   iSum, i: integer;
   iDigit: integer;
   cDigit: integer;
   iParity: integer;
 begin
-  iSum := StrToInt(argIDno[length(argIDno)]);
-  cDigit := length(argIDno);
-  iParity := cDigit mod 2;
-
   for i := 1 to cDigit - 1 do
   begin
-    iDigit := StrToInt(argIDno[i]);
+    iDigit := StrToInt(argInput[i]);
     if (i - 1) mod 2 = iParity then
       iDigit := iDigit * 2;
     if iDigit > 9 then
@@ -98,9 +112,15 @@ begin
     result := True
   else
     result := False;
+
 end;
 
-function isValidTelephoneNo(argTelephone: string): boolean;
+function isValidIDNo(argIDno: string): boolean; // uses the Luhn algorithm
+begin
+  result := ChecksumLuhnValid(argIDno);
+end;
+
+function isValidPhoneNo(argTelephone: string): boolean;
 begin
   if length(argTelephone) <> 10 then
     result := False
@@ -108,12 +128,28 @@ begin
     result := True;
 end;
 
-function isValidEmail(argEmail: string): boolean;
+function isValidEmail(argEmail: string): integer;
 var
   iCountAt: integer;
   bHasPeriod: boolean;
   i: integer;
 begin
+  with dmTravelRouter do
+  begin
+    tblUsers.Open;
+    tblUsers.First;
+    while not tblUsers.Eof do
+    begin
+      if argEmail = tblUsers['Email'] then
+      begin
+        result := 1; // Email already in use
+        EXIT;
+      end;
+      tblUsers.Next;
+    end;
+    tblUsers.Close;
+  end;
+
   bHasPeriod := False;
   iCountAt := 0;
 
@@ -136,15 +172,15 @@ begin
     end
     else
     begin
-      result := False;
-      exit;
+      result := 2;
+      EXIT;
     end;
   end;
 
   if (iCountAt = 1) and (bHasPeriod = True) then
-    result := True
+    result := 0 // Valid email
   else
-    result := False;
+    result := 2; // Invalid email format
 end;
 
 procedure TfrmLoginSignup.FormCreate(Sender: TObject);
@@ -157,6 +193,9 @@ begin
 end;
 
 procedure TfrmLoginSignup.FormShow(Sender: TObject);
+var
+  fRemember: textfile;
+  sEmail, sPassword: string;
 begin
   pcLoginSignup.ActivePage := tsLogin;
 
@@ -167,17 +206,51 @@ begin
   pnlSToLogin.left := (pcLoginSignup.Width - pnlSToLogin.Width) div 2;
 
   lblLGuest.left := (pcLoginSignup.Width - lblLGuest.Width) div 2;
+
+  rememberFilePath := copy(GetCurrentDir, 1, length(GetCurrentDir) - 11) +
+    'media\text\remember_me.txt';
+
+  AssignFile(fRemember, rememberFilePath);
+  if FileSize(rememberFilePath) > 0 then
+  begin
+    Reset(fRemember);
+    Readln(fRemember, sEmail);
+    Readln(fRemember, sPassword);
+    CloseFile(fRemember);
+
+    edtLEmail.Text := DecryptStr(sEmail, Key);
+    edtLPassword.Text := DecryptStr(sPassword, Key);
+  end;
+
 end;
 
 procedure TfrmLoginSignup.lblLGuestClick(Sender: TObject);
 begin
+  isGuest := True;
   frmMainMenu.Show;
   frmLoginSignup.Hide;
+
+  with frmMainMenu do
+  begin
+    pnlPlanTrip.Color := clSelected;
+    pnlPlanTrip.BevelInner := bvLowered;
+
+    pnlCurrentTrip.Color := clBase;
+    pnlCurrentTrip.BevelInner := bvNone;
+
+    imgSettings.Picture.LoadFromFile(copy(GetCurrentDir, 1,
+      length(GetCurrentDir) - 11) + '/media/images/whitesettings.png');
+    Refresh;
+
+    pcMainmenu.ActivePage := tsPlanTrip;
+  end;
+
 end;
 
 procedure TfrmLoginSignup.pnlLLoginClick(Sender: TObject);
 var
   bFound: boolean;
+  fRemember: textfile;
 begin
   bFound := False;
 
@@ -187,15 +260,29 @@ begin
     tblUsers.First;
     while not tblUsers.Eof do
     begin
-      if tblUsers['Email'] = edtLEmail.Text then // check if email is registered
+      if tblUsers['Email'] = edtLEmail.Text then
+      // check if email is registered
       begin
         if DecryptStr(tblUsers['Password'], Key) = edtLPassword.Text then
         // check if the email and password match
         begin
           bFound := True;
+          isGuest := False;
+
           User := TUser.Create(tblUsers['First Name'], tblUsers['Surname'],
             tblUsers['Email'], tblUsers['Phone No'], tblUsers['ID No'],
-            EncryptStr(tblUsers['Password'], Key)); // Initiate TUser object
+            DecryptStr(tblUsers['Password'], Key)); // Initiate TUser object
+          User.ID := tblUsers['ID'];
+
+          if cbLRemember.Checked = True then    // TEXT FILE
+          begin
+            AssignFile(fRemember, rememberFilePath);
+            Rewrite(fRemember);
+            Writeln(fRemember, EncryptStr(User.Email, Key));
+            Writeln(fRemember, EncryptStr(User.Password, Key));
+            CloseFile(fRemember);
+          end;
+
           frmMainMenu.Show;
           Hide;
           break;
@@ -217,7 +304,7 @@ end;
 procedure TfrmLoginSignup.pnlSSignUpClick(Sender: TObject);
 var
   bValid: boolean;
-  fRemember: Textfile;
+  fRemember: textfile;
 begin
   bValid := True;
 
@@ -227,13 +314,18 @@ begin
     bValid := False;
   end;
 
-  if not isValidEmail(edtSEmail.Text) then
+  if isValidEmail(edtSEmail.Text) = 1 then
+  begin
+    Showmessage('Email address already in use.');
+    bValid := False;
+  end
+  else if isValidEmail(edtSEmail.Text) = 2 then
   begin
     Showmessage('Invalid email adress.');
     bValid := False;
   end;
 
-  if not isValidTelephoneNo(edtSPhoneNo.Text) then
+  if not isValidPhoneNo(edtSPhoneNo.Text) then
   begin
     Showmessage('Invalid phone number.');
     bValid := False;
@@ -245,40 +337,26 @@ begin
     bValid := False;
   end;
 
-  with dmTravelRouter do
+  if bValid = True then
   begin
-    tblUsers.Open;
-    tblUsers.First;
-    while not tblUsers.Eof do
-    begin
-      if edtSEmail.Text = tblUsers['Email'] then
-      begin
-        bValid := False;
-        Showmessage('Email already in use.');
-        break;
-      end;
-      tblUsers.Next;
-    end;
-    tblUsers.Close;
+    // Initialising User object
+    User := TUser.Create(edtSFirstName.Text, edtSSurname.Text, edtSEmail.Text,
+      edtSPhoneNo.Text, edtSIDno.Text, edtSPassword.Text);
+    User.AddToDB;
+    frmMainMenu.Show;
+    Hide;
 
-    if bValid = True then
+    // Writing encrypted login details to a textfile to be retrieved on start up
+    if cbSRemember.Checked = True then
     begin
-      User := TUser.Create(edtSFirstName.Text, edtSSurname.Text, edtSEmail.Text,
-        edtSPhoneNo.Text, edtSIDno.Text, edtSPassword.Text);
-      User.AddToDB;
-      frmMainMenu.Show;
-      Hide;
+      AssignFile(fRemember, rememberFilePath);
+      Rewrite(fRemember);
+      Writeln(fRemember, EncryptStr(User.Email, Key));
+      Writeln(fRemember, EncryptStr(User.Password, Key));
+      CloseFile(fRemember);
     end;
-  end;
 
-  if cbSRemember.Checked = True then
-  begin
-    Assignfile(fRemember, copy(GetCurrentDir, 1, length(GetCurrentDir) - 11) +
-      '/media/text/remember_me.txt');
-    Rewrite(fRemember);
-    Writeln(fRemember, EncryptStr(User.Email, Key));
-    Writeln(fRemember, EncryptStr(User.Password, Key));
-    CloseFile(fRemember);
+    isGuest := False;
   end;
 
 end;

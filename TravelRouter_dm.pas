@@ -9,7 +9,9 @@ type
   TdmTravelRouter = class(TDataModule)
     connTravelRouterDB: TADOConnection;
     tblUsers: TADOTable;
+    tblBookings: TADOTable;
     tblAccomodation: TADOTable;
+    tblTrips: TADOTable;
     procedure DataModuleCreate(Sender: TObject);
   private
     { Private declarations }
@@ -29,7 +31,8 @@ procedure TdmTravelRouter.DataModuleCreate(Sender: TObject);
 begin
   connTravelRouterDB.Connected := False;
   connTravelRouterDB.ConnectionString :=
-    'Provider=Microsoft.Jet.OLEDB.4.0;Data Source=' + copy(GetCurrentDir, 1, length(GetCurrentDir) - 11) +
+    'Provider=Microsoft.Jet.OLEDB.4.0;Data Source=' + copy(GetCurrentDir, 1,
+    length(GetCurrentDir) - 11) +
     '\database\dbTravelRouter.mdb;Persist Security Info=False';
   connTravelRouterDB.Connected := True;
   tblUsers.Active := True;

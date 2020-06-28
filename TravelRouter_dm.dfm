@@ -1,8 +1,8 @@
 object dmTravelRouter: TdmTravelRouter
   OldCreateOrder = False
   OnCreate = DataModuleCreate
-  Height = 262
-  Width = 338
+  Height = 415
+  Width = 292
   object connTravelRouterDB: TADOConnection
     Connected = True
     ConnectionString = 
@@ -18,14 +18,27 @@ object dmTravelRouter: TdmTravelRouter
   end
   object tblUsers: TADOTable
     Connection = connTravelRouterDB
+    CursorType = ctStatic
     TableName = 'Users'
     Left = 152
     Top = 56
+  end
+  object tblBookings: TADOTable
+    Connection = connTravelRouterDB
+    TableName = 'Bookings'
+    Left = 152
+    Top = 152
   end
   object tblAccomodation: TADOTable
     Connection = connTravelRouterDB
     TableName = 'Accomodation'
     Left = 152
-    Top = 152
+    Top = 248
+  end
+  object tblTrips: TADOTable
+    Connection = connTravelRouterDB
+    TableName = 'Trips'
+    Left = 152
+    Top = 328
   end
 end

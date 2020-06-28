@@ -25,9 +25,11 @@ object frmLoginSignup: TfrmLoginSignup
     Margins.Top = 0
     Margins.Right = 0
     Margins.Bottom = 0
-    ActivePage = tsSignup
+    ActivePage = tsLogin
     Align = alClient
+    DoubleBuffered = False
     OwnerDraw = True
+    ParentDoubleBuffered = False
     TabOrder = 0
     object tsLogin: TTabSheet
       AlignWithMargins = True
@@ -39,10 +41,6 @@ object frmLoginSignup: TfrmLoginSignup
       DoubleBuffered = False
       ParentDoubleBuffered = False
       TabVisible = False
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object imgLBackground: TImage
         Left = 0
         Top = 0
@@ -17917,7 +17915,7 @@ object frmLoginSignup: TfrmLoginSignup
         ParentFont = False
       end
       object lblLGuest: TLabel
-        Left = 87
+        Left = 91
         Top = 370
         Width = 97
         Height = 16
@@ -17933,7 +17931,7 @@ object frmLoginSignup: TfrmLoginSignup
         OnClick = lblLGuestClick
       end
       object edtLEmail: TEdit
-        Left = 104
+        Left = 109
         Top = 170
         Width = 145
         Height = 21
@@ -17948,9 +17946,9 @@ object frmLoginSignup: TfrmLoginSignup
         Text = 'admin'
       end
       object edtLPassword: TEdit
-        Left = 104
+        Left = 109
         Top = 197
-        Width = 140
+        Width = 145
         Height = 21
         Color = clWhite
         Font.Charset = DEFAULT_CHARSET
@@ -17969,6 +17967,7 @@ object frmLoginSignup: TfrmLoginSignup
         Width = 107
         Height = 17
         Caption = 'Remember me'
+        Checked = True
         Color = clCream
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clBlack
@@ -17978,6 +17977,7 @@ object frmLoginSignup: TfrmLoginSignup
         Font.Quality = fqClearType
         ParentColor = False
         ParentFont = False
+        State = cbChecked
         TabOrder = 2
       end
       object pnlLLogin: TPanel
@@ -18023,6 +18023,10 @@ object frmLoginSignup: TfrmLoginSignup
       Caption = 'Sign up'
       ImageIndex = 1
       TabVisible = False
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object imgSBackground: TImage
         Left = 0
         Top = 0

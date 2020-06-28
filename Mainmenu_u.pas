@@ -5,7 +5,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.StrUtils,
   System.Variants,
-  System.Classes, Vcl.Graphics,
+  System.Classes, System.Generics.Collections, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, Vcl.ComCtrls,
   Vcl.Imaging.pngimage, Vcl.StdCtrls, Vcl.Samples.Spin, Vcl.Imaging.jpeg,
   Data.Win.ADODB, REST.Types, FireDAC.Stan.Intf, FireDAC.Stan.Option,
@@ -14,7 +14,7 @@ uses
   REST.Response.Adapter, REST.Client, Data.Bind.Components,
   Data.Bind.ObjectScope, Vcl.Grids, Vcl.DBGrids, IdHTTP, IdBaseComponent,
   IdComponent, IdIOHandler, IdIOHandlerSocket, IdIOHandlerStack, IdSSL,
-  IdSSLOpenSSL, JSON;
+  IdSSLOpenSSL, JSON, DateUtils, IdSSLOpenSSLHeaders, Data.DB;
 
 type
   TfrmMainMenu = class(TForm)
@@ -53,11 +53,6 @@ type
     lblArrive: TLabel;
     imgSettings: TImage;
     edtName: TEdit;
-    edtCity: TEdit;
-    edtNumber: TEdit;
-    edtProvince: TEdit;
-    edtStreet: TEdit;
-    edtSuburb: TEdit;
     lblName: TLabel;
     lblCost: TLabel;
     lblSetSurname: TLabel;
@@ -78,7 +73,27 @@ type
     redAccomodation2: TRichEdit;
     redAccomodation3: TRichEdit;
     pnlSearch: TPanel;
-    pnlSave: TPanel;
+    pnlSavePassword: TPanel;
+    pnlChangePassword: TPanel;
+    pnlSaveSettings: TPanel;
+    dbgTrips: TDBGrid;
+    Label1: TLabel;
+    Label2: TLabel;
+    Image1: TImage;
+    lblHeading2: TLabel;
+    lblHeading1: TLabel;
+    imgLogo: TImage;
+    cbTripName: TComboBox;
+    pnlNewTrip: TPanel;
+    lblTripName: TLabel;
+    lblID: TLabel;
+    lblBirthday: TLabel;
+    lblGender: TLabel;
+    lblUserBirthday: TLabel;
+    lblUserID: TLabel;
+    lblUserGender: TLabel;
+    imgViewAccomodation: TImage;
+    redAccomodation_view: TRichEdit;
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure pnlCurrentTripClick(Sender: TObject);
@@ -88,67 +103,274 @@ type
 
     procedure edtInput(Sender: TObject);
     procedure outsideClick(Sender: TObject);
+    procedure Recalculate(Sender: TObject);
+    procedure pnlAddClick(Sender: TObject);
+    procedure edtNameKeyPress(Sender: TObject; var Key: Char);
+    procedure pnlViewPlannedClick(Sender: TObject);
+    procedure pnlFinaliseClick(Sender: TObject);
+    procedure pnlSavePasswordClick(Sender: TObject);
+    procedure pnlChangePasswordClick(Sender: TObject);
+    procedure pnlSaveSettingsClick(Sender: TObject);
+    procedure pnlNewTripClick(Sender: TObject);
+    procedure cbTripNameSelect(Sender: TObject);
+    procedure cbTripNameDropDown(Sender: TObject);
+    procedure dbgTripsCellClick(Column: TColumn);
 
     { Private declarations }
   public
     { Public declarations }
   end;
 
+function countOccurences(s: string; b: Char): integer;
+procedure getImage(argPhotoref: string; argImg: TImage);
+
 var
   frmMainMenu: TfrmMainMenu;
   searchStr: string;
+  selected: integer;
+
+  arrImages: array [0 .. 2] of TImage;
+  arrREds: array [0 .. 2] of TRichEdit;
+  arrRBs: array [0 .. 2] of TRadioButton;
+
+  arrPlaceIDs: array [0 .. 2] of string;
+
+  found: Boolean;
+  plan_tripid: integer;
+
+  arr_perperson: array [0 .. 2] of array [0 .. 1] of currency;
+  // [0] adult, [1] child
+  arr_rating: array [0 .. 2] of real;
+  arr_attractions: array [0 .. 2] of array [0 .. 1] of string;
+  // [0] first attraction, [1] second attraction
+  arr_name: array [0 .. 2] of string;
+  arr_address: array [0 .. 2] of string;
+  arr_placeid: array [0 .. 2] of string;
+  arr_photoref: array [0 .. 2] of string;
+
+  arr_dates: array [0 .. 1] of TDateTime;
+  // [0] arrival date, [1] departure date
+  arr_amount: array [0 .. 1] of integer;
+  // [0] amount of adult, [1], amount of children
+
+  qryTripNames: TADOQuery;
 
 const
   clBase = $00C8CCA8;
   clSelected = $007B814B;
   clSecondary = $009FA666;
 
-  Key = 'AIzaSyC10J95nYpMWJFKhh5ee7CFzkJRJWO1RZ0';
+  API_Key = 'AIzaSyC10J95nYpMWJFKhh5ee7CFzkJRJWO1RZ0';
 
 implementation
 
 {$R *.dfm}
 
-uses LoginSignup_u, TravelRouter_dm, fuzzystring_u;
+uses LoginSignup_u, TravelRouter_dm, ViewTrip_u, displayTrip_u;
+
+function countOccurences(s: string; b: Char): integer;
+var
+  i, count: integer;
+begin
+  count := 0;
+  for i := low(s) to high(s) do
+  begin
+    if s[i] = b then
+    begin
+      count := count + 1;
+    end;
+  end;
+  Result := count;
+end;
 
 procedure TfrmMainMenu.outsideClick(Sender: TObject);
 begin
   if edtName.Text = '' then
   begin
-    edtName.Text := 'Name';
+    edtName.Text := 'Country, province, or town...';
     edtName.Font.Color := clGray;
   end;
+end;
 
-  if edtProvince.Text = '' then
+procedure TfrmMainMenu.pnlNewTripClick(Sender: TObject);
+var
+  tripname: string;
+begin
+  if isGuest = True then
   begin
-    edtProvince.Text := 'Province';
-    edtProvince.Font.Color := clGray;
+    showmessage('Please sign up or log in.');
+    frmMainMenu.Hide;
+    frmLoginSignup.Show;
+  end
+  else
+  begin
+
+    tripname := Inputbox('Trip name',
+      'Please enter a name to identify your trip', '');
+
+    pnlAdd.Enabled := True;
+    pnlAdd.BevelOuter := bvRaised;
+    pnlFinalise.Enabled := True;
+    pnlFinalise.BevelOuter := bvRaised;
+    pnlViewPlanned.Enabled := True;
+    pnlViewPlanned.BevelOuter := bvRaised;
+
+    with TADOQuery.Create(nil) do
+    begin
+      connection := dmTravelRouter.connTravelRouterDB;
+      SQL.Add('INSERT INTO Trips (Trip_Name, Finalised)');
+      SQL.Add('VALUES (:trip_name, :finalised)');
+      Parameters.ParamByName('trip_name').Value := tripname;
+      Parameters.ParamByName('finalised').Value := False;
+      ExecSQL;
+      Free;
+    end;
+
+    with dmTravelRouter do
+    begin
+      tblTrips.Open;
+      tblTrips.Last;
+      plan_tripid := tblTrips['ID'];
+      tblTrips.Close;
+    end;
+
+    lblTripName.Caption := tripname;
+  end;
+end;
+
+procedure TfrmMainMenu.cbTripNameDropDown(Sender: TObject);
+begin
+
+  qryTripNames := TADOQuery.Create(nil);
+  with qryTripNames do
+  begin
+    connection := dmTravelRouter.connTravelRouterDB;
+    SQL.Add('SELECT ID, Trip_Name FROM Trips');
+    SQL.Add('WHERE (ID IN (SELECT DISTINCT Trip_ID FROM Bookings WHERE User_ID = :UserID))');
+    SQL.Add('AND (Finalised = True)');
+    Parameters.ParamByName('UserID').Value := User.ID;
+    Open;
   end;
 
-  if edtCity.Text = '' then
+  qryTripNames.First;
+  cbTripName.Items.Clear;
+  while not qryTripNames.EoF do
   begin
-    edtCity.Text := 'City/Town';
-    edtCity.Font.Color := clGray;
+    cbTripName.Items.Add(qryTripNames['Trip_Name']);
+    qryTripNames.Next;
   end;
 
-  if edtSuburb.Text = '' then
+end;
+
+procedure TfrmMainMenu.cbTripNameSelect(Sender: TObject);
+var
+  selected_tripid, i: integer;
+  qryTripDetails: TADOQuery;
+  dsTripDetails: TDataSource;
+
+begin
+  imgViewAccomodation.Picture := nil;
+  redAccomodation_view.Clear;
+  redAccomodation_view.Visible := False;
+
+  i := 0;
+  qryTripNames.Open;
+  qryTripNames.First;
+  while not qryTripNames.EoF do
   begin
-    edtSuburb.Text := 'Suburb';
-    edtSuburb.Font.Color := clGray;
+    if i = cbTripName.ItemIndex then
+    begin
+      selected_tripid := qryTripNames['ID'];
+      break;
+    end;
+    qryTripNames.Next;
+    inc(i);
   end;
 
-  if edtNumber.Text = '' then
+  qryTripDetails := TADOQuery.Create(nil);
+  with qryTripDetails do
   begin
-    edtNumber.Text := 'Number';
-    edtNumber.Font.Color := clGray;
+    connection := dmTravelRouter.connTravelRouterDB;
+    SQL.Add('SELECT Bookings.ID AS BookingID, ');
+
+    SQL.Add('Accomodation.Place_Name AS [Accomodation Name],');
+
+    SQL.Add('FORMAT(Bookings.Arrival_Date, "ddd, d mmm yyyy") & " - " & FORMAT(Bookings.Departure_Date, "ddd, d mmm yyyy") AS [Dates of stay],');
+
+    SQL.Add('Bookings.Amount_of_Adults & " adults, " & Bookings.Amount_of_Children & " children" AS [Amount of people],');
+
+    SQL.Add('"R" & CStr((DATEDIFF("d", Bookings.Arrival_Date, Bookings.Departure_Date) * Bookings.Amount_of_Adults * Accomodation.Adult_ppn) + ');
+    SQL.Add('(DATEDIFF("d", Bookings.Arrival_Date, Bookings.Departure_Date) * Bookings.Amount_of_Children * Accomodation.Child_ppn))  AS [Total price]');
+
+    SQL.Add('FROM Bookings ');
+    SQL.Add('INNER JOIN Accomodation ON Accomodation.Place_ID = Bookings.Accomodation_ID ');
+    SQL.Add('WHERE (Bookings.Trip_ID = :TripID) AND (Bookings.User_ID = :UserID) ');
+    SQL.Add('ORDER BY Bookings.Arrival_Date'); // Uses ORDER BY to sort query
+    Parameters.ParamByName('TripID').Value := selected_tripid;
+    Parameters.ParamByName('UserID').Value := User.ID;
   end;
 
-  if edtStreet.Text = '' then
+  qryTripDetails.Open;
+  dsTripDetails := TDataSource.Create(nil);
+  dsTripDetails.DataSet := qryTripDetails;
+  dbgTrips.DataSource := dsTripDetails;
+  dbgTrips.Columns[0].Visible := False;
+end;
+
+procedure TfrmMainMenu.dbgTripsCellClick(Column: TColumn);
+var
+  photoref_view: string;
+  row_id: integer;
+  accomodation_id: string;
+begin
+  row_id := dbgTrips.DataSource.DataSet['BookingID'];
+  redAccomodation_view.Clear;
+  redAccomodation_view.Visible := False;
+
+  with dmTravelRouter do
   begin
-    edtStreet.Text := 'Street';
-    edtStreet.Font.Color := clGray;
+    tblBookings.Open;
+    tblBookings.First;
+    while not tblBookings.EoF do
+    begin
+
+      if row_id = tblBookings['ID'] then
+      begin
+        accomodation_id := tblBookings['Accomodation_ID'];
+
+        tblAccomodation.Open;
+        tblAccomodation.First;
+
+        while not tblAccomodation.EoF do
+        begin
+          if accomodation_id = tblAccomodation['Place_ID'] then
+          begin
+            photoref_view := tblAccomodation['Photo_ref'];
+
+            redAccomodation_view.Clear;
+            redAccomodation_view.Visible := True;
+            with redAccomodation_view.Lines do
+            begin
+              Add(Uppercase(tblAccomodation['Place_Name']));
+              Add('');
+              Add(tblAccomodation['Attraction_1']);
+              Add(tblAccomodation['Attraction_2']);
+              Add(tblAccomodation['Address']);
+            end;
+
+            break;
+          end;
+          tblAccomodation.Next;
+        end;
+
+        break;
+      end;
+      tblBookings.Next;
+    end;
+
   end;
 
+  getImage(photoref_view, imgViewAccomodation);
 end;
 
 procedure TfrmMainMenu.edtInput(Sender: TObject);
@@ -163,10 +385,18 @@ begin
   end;
 end;
 
+procedure TfrmMainMenu.edtNameKeyPress(Sender: TObject; var Key: Char);
+begin
+  if Key = #13 then
+    pnlSearchClick(Sender);
+end;
+
 procedure TfrmMainMenu.FormCreate(Sender: TObject);
 begin
   left := (Screen.WorkAreaWidth - frmMainMenu.Width) div 2;
   top := (Screen.WorkAreaHeight - frmMainMenu.Height) div 2;
+
+  found := False;
 end;
 
 procedure TfrmMainMenu.FormShow(Sender: TObject);
@@ -183,39 +413,190 @@ begin
 
   pcMainmenu.ActivePage := tsCurrentTrip;
 
-  lblName.Caption := ' Hello, ' + User.FirstName + '.';
+  if isGuest = False then
+    lblName.Caption := ' Hello, ' + User.FirstName + '.'
+  else
+    lblName.Caption := ' Hello, guest.';
   lblName.left := imgSettings.left - lblName.Width - 30;
   lblName.top := (pnlTabHolder.Height - lblName.Height) div 2;
 
+  lblTripName.Caption := '';
+  pnlAdd.Enabled := False;
+  pnlAdd.BevelOuter := bvLowered;
+  pnlFinalise.Enabled := False;
+  pnlFinalise.BevelOuter := bvLowered;
+  pnlViewPlanned.Enabled := False;
+  pnlViewPlanned.BevelOuter := bvLowered;
+
+  redAccomodation_view.Visible := False;
 end;
 
 procedure TfrmMainMenu.imgSettingsClick(Sender: TObject);
 begin
-  imgSettings.Picture.LoadFromFile(copy(GetCurrentDir, 1,
-    length(GetCurrentDir) - 11) + '/media/images/darkgreensettings.png');
-  Refresh;
+  if isGuest = True then
+  begin
+    showmessage('Please sign up or log in.');
+    frmLoginSignup.Show;
+    frmMainMenu.Hide;
+  end
+  else
+  begin
 
-  pnlPlanTrip.Color := clBase;
-  pnlPlanTrip.BevelInner := bvNone;
+    imgSettings.Picture.LoadFromFile(copy(GetCurrentDir, 1,
+      length(GetCurrentDir) - 11) + '/media/images/darkgreensettings.png');
+    Refresh;
 
-  pnlCurrentTrip.Color := clBase;
-  pnlCurrentTrip.BevelInner := bvNone;
-  pcMainmenu.ActivePage := tsSettings;
+    pnlPlanTrip.Color := clBase;
+    pnlPlanTrip.BevelInner := bvNone;
+
+    pnlCurrentTrip.Color := clBase;
+    pnlCurrentTrip.BevelInner := bvNone;
+    pcMainmenu.ActivePage := tsSettings;
+
+    edtSetName.Text := User.FirstName;
+    edtSetSurname.Text := User.Surname;
+    edtSetEmail.Text := User.Email;
+    edtSetPhone.Text := User.PhoneNo;
+
+    edtPassword.Enabled := False;
+    edtSetPassword.Enabled := False;
+    edtRePassword.Enabled := False;
+    pnlSavePassword.Enabled := False;
+    pnlSavePassword.BevelOuter := bvLowered;
+
+    lblUserID.Caption := User.IDNo;
+    lblUserBirthday.Caption := FormatDateTime('ddddd', User.DoB);
+    lblUserGender.Caption := User.Gender;
+
+  end;
+end;
+
+procedure TfrmMainMenu.pnlAddClick(Sender: TObject);
+var
+  accomodationFound: Boolean;
+begin
+  with dmTravelRouter do
+  begin
+    try
+      // Check if accomodation is already in accomodation table
+      tblAccomodation.Open;
+      tblAccomodation.First;
+      accomodationFound := False;
+
+      while not tblAccomodation.EoF do // SEARCH DATABASE
+      begin
+        if tblAccomodation['Place_ID'] = arr_placeid[selected] then
+        begin
+          accomodationFound := True;
+          break;
+        end;
+        tblAccomodation.Next;
+      end;
+
+      if accomodationFound = False then
+      begin
+        with TADOQuery.Create(nil) do
+        begin
+          connection := connTravelRouterDB;
+
+          // ADD accomodation values to the table
+          SQL.Add('INSERT INTO Accomodation (Place_ID, Place_Name, Address, Attraction_1, Attraction_2, Adult_ppn, Child_ppn, Rating, Photo_ref)');
+          SQL.Add('VALUES (:place_id, :name, :address, :attraction1, :attraction2, :ppadult, :ppchild, :rating, :photo_ref);');
+          Parameters.ParamByName('place_id').Value := arr_placeid[selected];
+          Parameters.ParamByName('name').Value := arr_name[selected];
+          Parameters.ParamByName('address').Value := arr_address[selected];
+          Parameters.ParamByName('attraction1').Value :=
+            arr_attractions[selected][0];
+          Parameters.ParamByName('attraction2').Value :=
+            arr_attractions[selected][1];
+          Parameters.ParamByName('ppadult').Value := arr_perperson[selected][0];
+          Parameters.ParamByName('ppchild').Value := arr_perperson[selected][1];
+          Parameters.ParamByName('rating').Value := arr_rating[selected];
+          Parameters.ParamByName('photo_ref').Value := arr_photoref[selected];
+
+          ExecSQL;
+          Free;
+        end;
+      end;
+
+      // Add booking to booking table
+      with TADOQuery.Create(nil) do
+      begin
+        connection := connTravelRouterDB;
+        SQL.Add('INSERT INTO Bookings (User_ID, Trip_ID, Accomodation_ID, Arrival_Date, Departure_Date, Amount_of_Adults, Amount_of_Children)');
+        SQL.Add('VALUES (:userID, :tripid, :placeID, :arrivedate, :leavedate, :amountadult, :amountchildren);');
+
+        Parameters.ParamByName('userID').Value := User.ID;
+        Parameters.ParamByName('tripid').Value := plan_tripid;
+        Parameters.ParamByName('placeID').Value := arr_placeid[selected];
+        Parameters.ParamByName('arrivedate').Value := arr_dates[0];
+        Parameters.ParamByName('leavedate').Value := arr_dates[1];
+        Parameters.ParamByName('amountadult').Value := arr_amount[0];
+        Parameters.ParamByName('amountchildren').Value := arr_amount[1];
+
+        ExecSQL;
+        Free;
+      end;
+
+      showmessage('Accomodation booking at ' + arr_name[selected] +
+        ' successfully added to trip.');
+    except
+      on E: Exception do
+      begin
+        showmessage('Error adding accomodation to trip: ' + E.Message);
+      end;
+    end;
+
+  end;
+end;
+
+procedure TfrmMainMenu.pnlChangePasswordClick(Sender: TObject);
+begin
+  edtPassword.Enabled := True;
+  edtSetPassword.Enabled := True;
+  edtRePassword.Enabled := True;
+  pnlSavePassword.Enabled := True;
+  pnlSavePassword.BevelOuter := bvRaised;
 end;
 
 procedure TfrmMainMenu.pnlCurrentTripClick(Sender: TObject);
 begin
-  pnlCurrentTrip.Color := clSelected;
-  pnlCurrentTrip.BevelInner := bvLowered;
+  if isGuest = True then
+  begin
+    showmessage('Please sign up or log in.');
+    frmLoginSignup.Show;
+    frmMainMenu.Hide;
+  end
+  else
+  begin
+    pnlCurrentTrip.Color := clSelected;
+    pnlCurrentTrip.BevelInner := bvLowered;
 
-  pnlPlanTrip.Color := clBase;
-  pnlPlanTrip.BevelInner := bvNone;
+    pnlPlanTrip.Color := clBase;
+    pnlPlanTrip.BevelInner := bvNone;
 
-  imgSettings.Picture.LoadFromFile(copy(GetCurrentDir, 1,
-    length(GetCurrentDir) - 11) + '/media/images/whitesettings.png');
-  Refresh;
+    imgSettings.Picture.LoadFromFile(copy(GetCurrentDir, 1,
+      length(GetCurrentDir) - 11) + '/media/images/whitesettings.png');
+    Refresh;
 
-  pcMainmenu.ActivePage := tsCurrentTrip;
+    pcMainmenu.ActivePage := tsCurrentTrip;
+  end;
+end;
+
+procedure TfrmMainMenu.pnlFinaliseClick(Sender: TObject);
+begin
+  frmMainMenu.Enabled := False;
+  frmViewTrip.pcViewTrip.ActivePage := frmViewTrip.tsCheckout;
+  frmViewTrip.pnlCheckout.Color := clSelected;
+  frmViewTrip.pnlCheckout.BevelInner := bvLowered;
+
+  frmViewTrip.pnlViewTrip.Color := clBase;
+  frmViewTrip.pnlViewTrip.BevelInner := bvNone;
+
+  frmViewTrip.pnlViewTrip.Visible := True;
+  frmViewTrip.pnlCheckout.Visible := True;
+
+  frmViewTrip.Show;
 end;
 
 procedure TfrmMainMenu.pnlPlanTripClick(Sender: TObject);
@@ -233,41 +614,88 @@ begin
   pcMainmenu.ActivePage := tsPlanTrip;
 end;
 
+procedure TfrmMainMenu.pnlSavePasswordClick(Sender: TObject);
+begin
+  if edtPassword.Text = User.Password then
+  begin
+    if edtSetPassword.Text = edtRePassword.Text then
+    begin
+      User.Password := edtSetPassword.Text;
+      try
+        User.UpdateDB;
+      except
+        on E: Exception do
+          showmessage('Failed to update database.');
+      end;
+    end
+    else
+      showmessage('Passwords do not match');
+  end
+  else
+    showmessage('Password is incorrect');
+
+  edtPassword.Text := '';
+  edtSetPassword.Text := '';
+  edtRePassword.Text := '';
+
+  edtPassword.Enabled := False;
+  edtSetPassword.Enabled := False;
+  edtRePassword.Enabled := False;
+  pnlSavePassword.Enabled := False;
+  pnlSavePassword.BevelOuter := bvLowered;
+end;
+
+procedure TfrmMainMenu.pnlSaveSettingsClick(Sender: TObject);
+begin
+  User.FirstName := edtSetName.Text;
+  User.Surname := edtSetSurname.Text;
+
+  if edtSetEmail.Text <> User.Email then
+  begin
+    if isValidEmail(edtSetEmail.Text) = 0 then
+    begin
+      User.Email := edtSetEmail.Text;
+    end
+    else if isValidEmail(edtSetEmail.Text) = 1 then
+    begin
+      showmessage('Email address already in use.');
+    end
+    else if isValidEmail(edtSetEmail.Text) = 2 then
+    begin
+      showmessage('Invalid email adress.');
+    end;
+  end;
+
+  if isValidPhoneNo(edtSetPhone.Text) then
+    User.PhoneNo := edtSetPhone.Text
+  else
+    showmessage('Invalid phone number');
+
+  try
+    User.UpdateDB;
+    showmessage('Setting successfully updated.');
+    lblName.Caption := 'Hello, ' + User.FirstName;
+  except
+    on E: Exception do
+      showmessage('Failed to update database.');
+  end;
+
+end;
+
 procedure TfrmMainMenu.pnlSearchClick(Sender: TObject);
 var
-
-  {
-    placesearchURL: string;
-    recordStr: string;
-
-    // DLD: Damerau-Levenshtein Distance
-    // Array that holds the DLD of records with the lowest DLD, arranged in asending order
-    lowestDLDid: array [0 .. 2] of integer;
-    // Array that holds the ids of records with the lowest DLD, arranged in asending order
-    lowestDLD: array [0 .. 2] of integer;
-    currDLD: integer;
-
-    qryGetMatches: TADOQuery;
-  }
   searchStr: string;
   searchURL: string;
-  name, address, place_id: string;
-  rating: real;
+
   pricerange: real;
-  ppadult, ppchild: real;
-  Attraction1, Attraction2: string;
-  imageURL, photoref: string;
 
-  IdHTTPReq: TIdHTTP;
-  SSLHandler: TIdSSLIOHandlerSocketOpenSSL;
+  attractionValue1, attractionValue2: integer;
+  photoRefStart: integer;
 
-  photoRefStart: Integer;
-
-  lResponse: TMemoryStream;
   strJSON: string;
   objJSON: TJSONObject;
-  candidatesJSON: TJSONArray;
-  candidateJSON: TJSONObject;
+  resultsJSON: TJSONArray;
+  resultJSON: TJSONObject;
   placeJSON: TJSONArray;
   photosJson: TJSONArray;
   photoJson: TJSONObject;
@@ -276,6 +704,8 @@ var
   RESTReq: TRESTRequest;
   RESTResp: TRESTResponse;
 
+  j, i, iEnd: integer;
+
 const
   attractions: array [0 .. 21] of string = ('Swimming pool', 'Free wifi',
     'Mountain view', 'Free parking', 'Bed and breakfast', 'Room service',
@@ -283,270 +713,265 @@ const
     'Jacuzzi', 'Bicycle rental', 'Free car service', 'Heated swimming pool',
     'Gym', 'Bar', 'Spa', 'Air conditioning', 'Beach view', 'Tennis court',
     'Mountain-bike trails');
-begin {
-    lowestDLDid[0] := 0;
-    lowestDLDid[1] := 0;
-    lowestDLDid[2] := 0;
 
-    lowestDLD[0] := 0;
-    lowestDLD[1] := 0;
-    lowestDLD[2] := 0;
+begin
+  lblTopMatches.Visible := True;
 
-    searchStr := ifthen(edtName.Text = 'Name', '', edtName.Text) +
-    ifthen(edtProvince.Text = 'Province', '', edtProvince.Text) +
-    ifthen(edtCity.Text = 'City/Town', '', edtCity.Text) +
-    ifthen(edtSuburb.Text = 'Suburb', '', edtSuburb.Text) +
-    ifthen(edtNumber.Text = 'Number', '', edtNumber.Text) +
-    ifthen(edtStreet.Text = 'Street', '', edtStreet.Text);
+  arrImages[0] := imgAccomodation1;
+  arrImages[1] := imgAccomodation2;
+  arrImages[2] := imgAccomodation3;
 
-    with dmTravelRouter do
-    begin
-    tblAccomodation.Open;
-    tblAccomodation.First;
+  arrREds[0] := redAccomodation1;
+  arrREds[1] := redAccomodation2;
+  arrREds[2] := redAccomodation3;
 
-    while not tblAccomodation.EoF do
-    begin
-    recordStr := ifthen(edtName.Text = 'Name', '', tblAccomodation['Name']) +
-    ifthen(edtProvince.Text = 'Province', '', tblAccomodation['Province']) +
-    ifthen(edtCity.Text = 'City/Town', '', tblAccomodation['City/Town']) +
-    ifthen(edtSuburb.Text = 'Suburb', '', tblAccomodation['Suburb']) +
-    ifthen(edtNumber.Text = 'Number', '', IntToStr(tblAccomodation['Number']
-    )) + ifthen(edtStreet.Text = 'Street', '', tblAccomodation['Street']);
+  arrRBs[0] := rbSelect1;
+  arrRBs[1] := rbSelect2;
+  arrRBs[2] := rbSelect3;
 
-    currDLD := DamerauLevenshteinDistance(searchStr, recordStr);
+  searchStr := edtName.Text + ' accomodation';
 
-    if currDLD < lowestDLD[0] then
-    begin
-    lowestDLDid[2] := lowestDLDid[1];
-    lowestDLDid[1] := lowestDLDid[0];
-    lowestDLD[0] := currDLD;
-
-    lowestDLD[2] := lowestDLD[1];
-    lowestDLD[1] := lowestDLD[0];
-    lowestDLDid[0] := tblAccomodation['ID'];
-    end
-    else if currDLD < lowestDLD[1] then
-    begin
-    lowestDLDid[2] := lowestDLDid[1];
-    lowestDLD[1] := currDLD;
-
-    lowestDLD[2] := lowestDLD[1];
-    lowestDLDid[1] := tblAccomodation['ID'];
-    end
-    else if currDLD < lowestDLD[2] then
-    begin
-    lowestDLD[2] := currDLD;
-
-    lowestDLDid[2] := tblAccomodation['ID'];
-    end;
-
-    tblAccomodation.Next;
-    end;
-    end;
-
-    qryGetMatches := TADOQuery.Create(nil);
-    with qryGetMatches do
-    begin
-    Close;
-    Connection := dmTravelRouter.connTravelRouterDB;
-    SQL.Clear;
-    SQL.Add('SELECT * ');
-    SQL.Add('FROM Accomodation');
-    SQL.Add('WHERE ID = ' + IntToStr(lowestDLDid[0]) + ' OR');
-    SQL.Add('ID = ' + IntToStr(lowestDLDid[1]) + ' OR');
-    SQL.Add('ID = ' + IntToStr(lowestDLDid[2]) + ';');
-    Open;
-    First;
-    end;
-
-    // First accomodation match
-    imgAccomodation1.Picture.LoadFromFile(['ImagePath']);
-    redAccomodation1.Clear;
-    redAccomodation1.Lines.Add(UpperCase(qryGetMatches['Name']));
-    redAccomodation1.Lines.Add('');
-    redAccomodation1.Lines.Add(FormatFloat('0.0', qryGetMatches['Star rating']) +
-    '/5 stars');
-    if qryGetMatches['Attraction1'] <> 'None' then
-    redAccomodation1.Lines.Add(qryGetMatches['Attraction1']);
-    if qryGetMatches['Attraction2'] <> 'None' then
-    redAccomodation1.Lines.Add(qryGetMatches['Attraction2']);
-
-    redAccomodation1.Lines.Add('Price per night for adults: R' +
-    FormatFloat('0.00', qryGetMatches['Price per adult per night']));
-    redAccomodation1.Lines.Add('Price per night for children: R' +
-    FormatFloat('0.00', qryGetMatches['Price per child per night']));
-
-    Next;
-
-    // Second accomodation match
-    imgAccomodation2.Picture.LoadFromFile(['ImagePath']);
-    redAccomodation2.Clear;
-    redAccomodation2.Lines.Add(UpperCase(qryGetMatches['Name']));
-    redAccomodation2.Lines.Add('');
-    redAccomodation2.Lines.Add(FormatFloat('0.0', qryGetMatches['Star rating']) +
-    '/5 stars');
-    if qryGetMatches['Attraction1'] <> 'None' then
-    redAccomodation2.Lines.Add(qryGetMatches['Attraction1']);
-    if qryGetMatches['Attraction2'] <> 'None' then
-    redAccomodation2.Lines.Add(qryGetMatches['Attraction2']);
-
-    redAccomodation2.Lines.Add('Price per night for adults: R' +
-    FormatFloat('0.00', qryGetMatches['Price per adult per night']));
-    redAccomodation2.Lines.Add('Price per night for children: R' +
-    FormatFloat('0.00', qryGetMatches['Price per child per night']));
-
-    Next;
-
-    // Third accomodation match
-    imgAccomodation3.Picture.LoadFromFile(['ImagePath']);
-    redAccomodation3.Clear;
-    redAccomodation3.Lines.Add(UpperCase(qryGetMatches['Name']));
-    redAccomodation3.Lines.Add('');
-    redAccomodation3.Lines.Add(FormatFloat('0.0', qryGetMatches['Star rating']) +
-    '/5 stars');
-    if qryGetMatches['Attraction1'] <> 'None' then
-    redAccomodation3.Lines.Add(qryGetMatches['Attraction1']);
-    if qryGetMatches['Attraction2'] <> 'None' then
-    redAccomodation3.Lines.Add(qryGetMatches['Attraction2']);
-
-    redAccomodation3.Lines.Add('Price per night for adults: R' +
-    FormatFloat('0.00', qryGetMatches['Price per adult per night']));
-    redAccomodation3.Lines.Add('Price per night for children: R' +
-    FormatFloat('0.00', qryGetMatches['Price per child per night']));
-
-  }
-  searchStr := edtName.Text;
-  searchURL :=
-    format('https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=%s&inputtype=textquery&fields=%s&key=%s',
-    [searchStr, 'place_id,formatted_address,name,rating,photos', Key]);
+  for i := 0 to 2 do
+  begin
+    arrREds[i].Visible := False;
+    arrRBs[i].Visible := False;
+    arrImages[i].Picture := nil;
+  end;
 
   try
     try
-      try
-        RESTClnt := TRESTClient.Create
-          ('https://maps.googleapis.com/maps/api/place/findplacefromtext/json?parameters');
-        with RESTClnt do
-        begin
-          Accept := 'application/json, text/plain; q=0.9, text/html;q=0.8,';
-          AcceptCharSet := 'utf-8, *;q=0.8';
-          RaiseExceptionOn500 := False;
-        end;
-
-        RESTResp := TRESTResponse.Create(nil);
-        with RESTResp do
-        begin
-          ContentType := 'application/json';
-        end;
-
-        RESTReq := TRESTRequest.Create(nil);
-        with RESTReq do
-        begin
-          Client := RESTClnt;
-          Response := RESTResp;
-
-          Params.Clear;
-          Params.AddItem('input', searchStr, pkGETorPOST);
-          Params.AddItem('inputtype', 'textquery', pkGETorPOST);
-          Params.AddItem('fields',
-            'place_id,formatted_address,name,rating,photos', pkGETorPOST);
-          Params.AddItem('key', Key, pkGETorPOST);
-        end;
-
-        RESTReq.Execute;
-
-      except
-        on E: Exception do
-        begin
-          Showmessage('Unable to process REST request');
-        end;
-
+      RESTClnt := TRESTClient.Create
+        ('https://maps.googleapis.com/maps/api/place/textsearch/json?parameters');
+      with RESTClnt do
+      begin
+        Accept := 'application/json, text/plain; q=0.9, text/html;q=0.8,';
+        AcceptCharSet := 'utf-8, *;q=0.8';
+        RaiseExceptionOn500 := False;
       end;
 
-      strJSON := RESTResp.JSONText;
-      Showmessage(strJSON);
-
-      objJSON := TJSONObject.ParseJSONValue(strJSON) as TJSONObject;
-
-      try
-        candidatesJSON := objJSON.GetValue('candidates') as TJSONArray;
-        candidateJSON := candidatesJSON.Get(0) as TJSONObject;
-
-        name := candidateJSON.GetValue<string>('name');
-        address := candidateJSON.GetValue<string>('formatted_address');
-        rating := candidateJSON.GetValue<real>('rating');
-        place_id := candidateJSON.GetValue<string>('place_id');
-
-        photosJson := candidateJSON.GetValue('photos') as TJSONArray;
-        photoJson := photosJson.Get(0) as TJSONObject;
-        photoref := photoJson.GetValue<string>('photo_reference');
-
-      finally
-        FreeAndNil(objJSON);
+      RESTResp := TRESTResponse.Create(nil);
+      with RESTResp do
+      begin
+        ContentType := 'application/json';
       end;
+
+      RESTReq := TRESTRequest.Create(nil);
+      with RESTReq do
+      begin
+        Client := RESTClnt;
+        Response := RESTResp;
+
+        Params.Clear;
+        Params.AddItem('input', searchStr, pkGETorPOST);
+        Params.AddItem('fields',
+          'place_id,formatted_address,name,rating,photos', pkGETorPOST);
+        Params.AddItem('key', API_Key, pkGETorPOST);
+        Params.AddItem('type', 'lodging', pkGETorPOST);
+      end;
+
+      RESTReq.Execute;
 
     except
       on E: Exception do
       begin
-        Showmessage('Error excecuting API request');
-        exit;
+        showmessage('Unable to process REST request');
       end;
+
     end;
-  finally
-    lResponse.Free;
-    IdHTTPReq.Free;;
+
+    strJSON := RESTResp.JSONText;
+    objJSON := TJSONObject.ParseJSONValue(strJSON) as TJSONObject;
+
+    try
+      resultsJSON := objJSON.GetValue('results') as TJSONArray;
+
+      if resultsJSON.count >= 3 then
+      begin
+        iEnd := 2
+      end
+      else
+      begin
+        iEnd := resultsJSON.count - 1;
+      end;
+
+      for i := 0 to iEnd do
+      begin
+
+        resultJSON := resultsJSON.Get(i) as TJSONObject;
+
+        arr_name[i] := resultJSON.GetValue<string>('name');
+        arr_address[i] := resultJSON.GetValue<string>('formatted_address');
+        arr_rating[i] := resultJSON.GetValue<real>('rating');
+        arr_placeid[i] := resultJSON.GetValue<string>('place_id');
+
+        try
+          photosJson := resultJSON.GetValue('photos') as TJSONArray;
+          photoJson := photosJson.Get(0) as TJSONObject;
+          arr_photoref[i] := photoJson.GetValue<string>('photo_reference');
+        except
+          on E: Exception do
+          begin
+            arr_photoref[i] := 'none';
+          end;
+        end;
+
+
+        // Fill out each accomodation
+
+        pricerange := (countOccurences(arr_placeid[i],
+          arr_placeid[i][high(arr_placeid[i])]) +
+          countOccurences(arr_placeid[i], 'X') + length(arr_name[i])) /
+          ((countOccurences(arr_placeid[i], 'a') +
+          length(arr_placeid[i])) div 5);
+        // price range is a value between 1 and 5 generated from the place ID
+
+        arr_perperson[i][0] := pricerange * 100; // adults
+        arr_perperson[i][1] := pricerange * 75; // children
+
+        attractionValue1 :=
+          (length(arr_name[i]) + countOccurences(arr_placeid[i],
+          arr_placeid[i][high(arr_placeid[i])])) mod high(attractions);
+
+        j := 65;
+        repeat
+        begin
+          attractionValue2 := (countOccurences(arr_placeid[i], Char(j)) +
+            length(arr_name[i])) mod high(attractions);
+          inc(j);
+        end;
+        until (attractionValue2 <> attractionValue1) or (j = 172);
+
+        arr_attractions[i][0] := attractions[attractionValue1];
+        arr_attractions[i][1] := attractions[attractionValue2];
+
+        arrREds[i].Clear;
+        with arrREds[i].Lines do
+        begin
+          Add(Uppercase(arr_name[i]));
+          Add('');
+          Add(formatfloat('0.0', arr_rating[i]) + '/5 stars');
+          Add(arr_attractions[i][0]);
+          Add(arr_attractions[i][1]);
+          Add('Price/night for adults: R' + formatfloat('0',
+            arr_perperson[i][0]));
+          Add('Price/night for children: R' + formatfloat('0',
+            arr_perperson[i][1]));
+          Add(arr_address[i]);
+        end;
+
+        getImage(arr_photoref[i], arrImages[i]);
+
+        arrImages[i].Visible := True;
+        arrREds[i].Visible := True;
+
+      end;
+
+      rbSelect1.Checked := True;
+      found := True;
+    finally
+      FreeAndNil(objJSON);
+    end;
+  except
+    on E: Exception do
+    begin
+      showmessage('Error excecuting API request');
+      exit;
+    end;
   end;
 
-  pricerange := (random(41) + 10) / 10;
-  // price range is a value between 1 and 5
+  for i := 0 to iEnd do
+    arrRBs[i].Visible := True;
+end;
 
-  ppadult := pricerange * 100;
-  ppchild := pricerange * 75;
+procedure getImage(argPhotoref: string; argImg: TImage);
+var
+  DLLpath: string;
+  imageURL: string;
 
-  Attraction1 := attractions[random(length(attractions))];
+  IdHTTPReq: TIdHTTP;
+  SSLHandler: TIdSSLIOHandlerSocketOpenSSL;
+  lResponse: TMemoryStream;
 
-  Attraction2 := attractions[random(length(attractions))];
-  while Attraction1 = Attraction2 do
-    Attraction2 := attractions[random(length(attractions))];
-
-  redAccomodation1.Clear;
-  with redAccomodation1.Lines do
-  begin
-    Add(Uppercase(name));
-    Add('');
-    Add(FormatFloat('0.0', rating) + '/5 stars');
-    Add(Attraction1);
-    Add(Attraction2);
-    Add('Price per night (adults): R' + FormatFloat('0', ppadult));
-    Add('Price per night (children): R' + FormatFloat('0', ppchild));
-  end;
-
+begin
   try
     try
       // request image
-      imageURL := 'https://maps.googleapis.com/maps/api/place/photo?maxwidth=' +
-        '400' + '&photoreference=' + photoref + '&key=' + Key;
 
-      IdHTTPReq := TIdHTTP.Create;
-      lResponse := TMemoryStream.Create;
+      if argPhotoref <> 'none' then
+      begin
 
-      SSLHandler := TIdSSLIOHandlerSocketOpenSSL.Create(IdHTTPReq);
-      SSLHandler.SSLOptions.SSLVersions := [sslvTLSv1_1, sslvTLSv1_2];
-      IdHTTPReq.IOHandler := SSLHandler;
+        DLLpath := GetCurrentDir + '\OpenSSL';
+        IdOpenSSLSetLibPath(DLLpath);
 
-      IdHTTPReq.HandleRedirects := True;
-      IdHTTPReq.Get(imageURL, lResponse);
+        imageURL :=
+          'https://maps.googleapis.com/maps/api/place/photo?maxheight=' + '150'
+          + '&photoreference=' + argPhotoref + '&key=' + API_Key;
 
-      lResponse.Position := 0;
-      lResponse.Seek(0, soFromBeginning);
-      imgAccomodation1.Picture.LoadFromStream(lResponse);
+        IdHTTPReq := TIdHTTP.Create;
+        lResponse := TMemoryStream.Create;
+
+        SSLHandler := TIdSSLIOHandlerSocketOpenSSL.Create(IdHTTPReq);
+        SSLHandler.SSLOptions.SSLVersions := [sslvTLSv1_1, sslvTLSv1_2];
+        IdHTTPReq.IOHandler := SSLHandler;
+
+        IdHTTPReq.HandleRedirects := True;
+        IdHTTPReq.Get(imageURL, lResponse);
+
+        lResponse.Position := 0;
+        lResponse.Seek(0, soFromBeginning);
+
+        argImg.Picture.LoadFromStream(lResponse);
+      end
+      else
+        argImg.Picture.LoadFromFile(copy(GetCurrentDir, 1,
+          length(GetCurrentDir) - 11) + '\media\images\no_image_available.png');
 
     except
       on E: Exception do
-        Showmessage('Error getting image');
+      begin
+        showmessage('Error getting image');
+      end;
     end;
   finally
     FreeAndNil(lResponse);
     FreeAndNil(IdHTTPReq);
+  end;
+end;
+
+procedure TfrmMainMenu.pnlViewPlannedClick(Sender: TObject);
+begin
+  frmMainMenu.Enabled := False;
+  frmViewTrip.pcViewTrip.ActivePage := frmViewTrip.tsViewTrip;
+  frmViewTrip.pnlViewTrip.Visible := False;
+  frmViewTrip.pnlCheckout.Visible := False;
+
+  frmViewTrip.Show;
+end;
+
+procedure TfrmMainMenu.Recalculate(Sender: TObject);
+var
+  totalCost: real;
+  nights: integer;
+begin
+  if found = True then
+  begin
+    if rbSelect1.Checked = True then
+      selected := 0
+    else if rbSelect2.Checked = True then
+      selected := 1
+    else if rbSelect3.Checked = True then
+      selected := 2;
+
+    arr_dates[0] := dtpArrive.Date;
+    arr_dates[1] := dtpLeave.Date;
+
+    nights := DaysBetween(arr_dates[0], arr_dates[1]);
+    arr_amount[0] := speAdults.Value;
+    arr_amount[1] := speChildren.Value;
+
+    totalCost := (arr_amount[0] * arr_perperson[selected][0] * nights) +
+      (arr_amount[1] * arr_perperson[selected][1] * nights);
+    lblCost.Caption := 'Cost: R' + formatfloat('0.00', totalCost);
   end;
 
 end;

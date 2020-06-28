@@ -11,17 +11,23 @@ type
     fFirstName: string;
     fSurname: string;
     fDoB: TDateTime;
-    fGender: Char;
+    fGender: string;
     fEmail: string;
     fPhoneNo: string;
     fIDNo: string;
-    fPassword: string;
+    fPassword: string; // Not encrypted
+    fUser_ID: integer;
 
   public
+    property ID: integer read fUser_ID write fUser_ID;
     property FirstName: string read fFirstName write fFirstName;
     property Surname: string read fSurname write fSurname;
     property Email: string read fEmail write fEmail;
     property Password: string read fPassword write fPassword;
+    property PhoneNo: string read fPhoneNo write fPhoneNo;
+    property IDNo: string read fIDNo write fIDNo;
+    property Gender: string read fGender write fGender;
+    property DoB: TDateTime read fDoB write fDoB;
 
     constructor Create(argFirstName, argSurname, argEmail, argPhoneNo, argIDno,
       argPassword: string);
@@ -45,15 +51,18 @@ begin
     tblUsers.Append;
     tblUsers['First Name'] := fFirstName;
     tblUsers['Surname'] := fSurname;
-    // Uses encryption module
-    tblUsers['Password'] := EncryptStr(fPassword, Key);
     tblUsers['Email'] := fEmail;
     tblUsers['Phone No'] := fPhoneNo;
     tblUsers['Birthdate'] := fDoB;
     tblUsers['ID No'] := fIDNo;
     tblUsers['Gender'] := fGender;
+
+    // Uses encryption module
+    tblUsers['Password'] := EncryptStr(fPassword, Key);
+
     tblUsers.Post;
     tblUsers.Close;
+    fUser_ID := tblUsers['ID'];
   end;
 end;
 
@@ -77,10 +86,10 @@ begin
 
   if StrToInt(copy(argIDno, 7, 4)) < 5000 then
   begin
-    fGender := 'F';
+    fGender := 'Female';
   end
   else
-    fGender := 'M';
+    fGender := 'Male';
 
   fPhoneNo := argPhoneNo;
   fIDNo := argIDno;
@@ -109,6 +118,8 @@ begin
         tblUsers['Birthdate'] := fDoB;
         tblUsers['ID No'] := fIDNo;
         tblUsers['Gender'] := fGender;
+        // Do not update ID as that is primary key
+
         tblUsers.Post;
         tblUsers.Close;
         break;

@@ -6,7 +6,7 @@ uses
   Mainmenu_u in 'Mainmenu_u.pas' {frmMainMenu},
   user_cls in 'user_cls.pas',
   TravelRouter_dm in 'TravelRouter_dm.pas' {dmTravelRouter: TDataModule},
-  fuzzystring_u in 'fuzzystring_u.pas';
+  ViewTrip_u in 'ViewTrip_u.pas' {frmViewTrip};
 
 {$R *.res}
 
@@ -16,5 +16,6 @@ begin
   Application.CreateForm(TfrmLoginSignup, frmLoginSignup);
   Application.CreateForm(TfrmMainMenu, frmMainMenu);
   Application.CreateForm(TdmTravelRouter, dmTravelRouter);
+  Application.CreateForm(TfrmViewTrip, frmViewTrip);
   Application.Run;
 end.
